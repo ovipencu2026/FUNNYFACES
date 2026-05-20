@@ -21,6 +21,7 @@ For phones, use the LAN URL printed in the terminal, usually something like `htt
 - Lets guests upload multiple photos or videos.
 - Stores files under `uploads/<event-slug>/`.
 - Shows an event gallery for the organizer.
+- Shows your logo as a subtle page background when you add it as `static/logo.png`.
 
 ## Launch Online
 
