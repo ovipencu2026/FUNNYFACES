@@ -109,6 +109,19 @@ def photo_records(slug: str) -> list[dict]:
     return records
 
 
+def render_photo_tiles(photos: list[dict], empty_message: str) -> str:
+    tiles = []
+    for photo in photos:
+        if photo["is_video"]:
+            media = f'<video src="{photo["url"]}" controls muted></video>'
+        else:
+            media = f'<img src="{photo["url"]}" alt="Uploaded event photo">'
+        tiles.append(f'<article class="photo-tile">{media}<span>{photo["uploaded"]}</span></article>')
+    if not tiles:
+        tiles.append(f'<p class="empty">{html.escape(empty_message)}</p>')
+    return "".join(tiles)
+
+
 def render_page(title: str, body: str, extra_head: str = "") -> bytes:
     return f"""<!doctype html>
 <html lang="en">
@@ -347,6 +360,9 @@ class EventHandler(BaseHTTPRequestHandler):
             self.show_gallery(unquote(path.removeprefix("/gallery/")))
         elif path.startswith("/qr/") and path.endswith(".png"):
             self.show_qr(unquote(path.removeprefix("/qr/").removesuffix(".png")))
+        elif path.startswith("/api/events/") and path.endswith("/photos"):
+            slug = unquote(path.removeprefix("/api/events/").removesuffix("/photos"))
+            self.list_photos(slug)
         elif path.startswith("/uploads/"):
             self.serve_upload(path)
         elif path.startswith("/static/"):
@@ -427,6 +443,7 @@ class EventHandler(BaseHTTPRequestHandler):
         if not event:
             self.error_page(HTTPStatus.NOT_FOUND, "Event not found")
             return
+        photos = photo_records(slug)
         body = f"""
 <main class="upload-screen">
   <section class="upload-panel">
@@ -442,6 +459,13 @@ class EventHandler(BaseHTTPRequestHandler):
       <button type="submit">Upload selected files</button>
     </form>
     <div id="status" class="status" role="status"></div>
+    <a class="gallery-link" href="/gallery/{quote(slug)}">View full gallery</a>
+  </section>
+  <section class="recent-panel">
+    <h2>Recent uploads</h2>
+    <div id="recentUploads" class="photo-grid compact">
+      {render_photo_tiles(photos[:8], "No uploads are visible yet. Add a photo and it will appear here.")}
+    </div>
   </section>
 </main>
 <script>
@@ -480,7 +504,13 @@ class EventHandler(BaseHTTPRequestHandler):
         if not saved:
             self.error_json(HTTPStatus.BAD_REQUEST, "No valid photo or video files were uploaded")
             return
-        self.respond_json({"ok": True, "saved": saved})
+        self.respond_json({"ok": True, "saved": saved, "photos": photo_records(slug)[:8]})
+
+    def list_photos(self, slug: str) -> None:
+        if not event_by_slug(slug):
+            self.error_json(HTTPStatus.NOT_FOUND, "Event not found")
+            return
+        self.respond_json({"ok": True, "photos": photo_records(slug)})
 
     def show_gallery(self, slug: str) -> None:
         event = event_by_slug(slug)
@@ -489,15 +519,6 @@ class EventHandler(BaseHTTPRequestHandler):
             return
         photos = photo_records(slug)
         link = event_link(self, event)
-        tiles = []
-        for photo in photos:
-            if photo["is_video"]:
-                media = f'<video src="{photo["url"]}" controls muted></video>'
-            else:
-                media = f'<img src="{photo["url"]}" alt="Uploaded event photo">'
-            tiles.append(f'<article class="photo-tile">{media}<span>{photo["uploaded"]}</span></article>')
-        if not tiles:
-            tiles.append('<p class="empty">No uploads yet. Share the QR code and this gallery will fill up.</p>')
         body = f"""
 <main class="shell">
   <nav class="topbar"><a href="/">All events</a><a href="/e/{quote(slug)}">Guest upload page</a></nav>
@@ -512,7 +533,7 @@ class EventHandler(BaseHTTPRequestHandler):
       <input readonly value="{html.escape(link)}" onclick="this.select()">
     </div>
   </section>
-  <section class="photo-grid">{''.join(tiles)}</section>
+  <section class="photo-grid">{render_photo_tiles(photos, "No uploads yet. Share the QR code and this gallery will fill up.")}</section>
 </main>"""
         self.respond(render_page(f"{event['name']} Gallery", body), "text/html; charset=utf-8")
 

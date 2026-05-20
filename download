@@ -210,7 +210,11 @@ button:hover,
 
 .upload-screen {
   display: grid;
+  grid-template-columns: minmax(280px, 520px) minmax(280px, 680px);
+  gap: 22px;
   min-height: 100vh;
+  align-items: center;
+  justify-content: center;
   place-items: center;
   padding: 18px;
 }
@@ -218,6 +222,15 @@ button:hover,
 .upload-panel {
   width: min(520px, 100%);
   padding: 26px;
+}
+
+.recent-panel {
+  width: min(680px, 100%);
+}
+
+.recent-panel h2 {
+  margin: 0 0 14px;
+  font-size: 1.4rem;
 }
 
 .drop-zone {
@@ -271,6 +284,17 @@ button:hover,
   font-weight: 800;
 }
 
+.gallery-link {
+  display: inline-flex;
+  margin-top: 10px;
+  color: var(--brand-dark);
+  font-weight: 800;
+}
+
+.photo-grid.compact {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
 .empty {
   grid-column: 1 / -1;
   margin: 0;
@@ -292,6 +316,11 @@ button:hover,
   .gallery-head {
     grid-template-columns: 1fr;
     padding: 18px 0;
+  }
+
+  .upload-screen {
+    grid-template-columns: 1fr;
+    align-items: start;
   }
 
   .hero h1,
