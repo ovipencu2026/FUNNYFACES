@@ -1,66 +1,25 @@
-const form = document.querySelector("#uploadForm");
-const input = document.querySelector("#photos");
-const statusBox = document.querySelector("#status");
-const recentUploads = document.querySelector("#recentUploads");
+# Launch FUNNYFACES Online
 
-function setStatus(message) {
-  statusBox.textContent = message;
-}
+## Recommended Simple Launch: Render
 
-function renderPhotos(photos) {
-  if (!recentUploads) return;
-  if (!photos.length) {
-    recentUploads.innerHTML = '<p class="empty">No uploads are visible yet. Add a photo and it will appear here.</p>';
-    return;
-  }
+1. Create a GitHub repository and push this folder.
+2. In Render, create a new Web Service from the repository.
+3. Use these settings:
+   - Runtime: Python
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `python server.py`
+4. Add a persistent disk for uploads and event data.
+5. Add this environment variable:
+   - `STORAGE_DIR=/opt/render/project/src/storage`
+6. Deploy, open the public URL, create an event, and use the generated QR code.
 
-  recentUploads.innerHTML = photos
-    .slice(0, 8)
-    .map((photo) => {
-      const media = photo.is_video
-        ? `<video src="${photo.url}" controls muted></video>`
-        : `<img src="${photo.url}" alt="Uploaded event photo">`;
-      return `<article class="photo-tile">${media}<span>${photo.uploaded}</span></article>`;
-    })
-    .join("");
-}
+## Alternative: Railway
 
-input?.addEventListener("change", () => {
-  const count = input.files.length;
-  setStatus(count ? `${count} file${count === 1 ? "" : "s"} selected` : "");
-});
+1. Create a new Railway project from the GitHub repository.
+2. Use `python server.py` as the start command if Railway does not detect the `Procfile`.
+3. Railway provides the `PORT` variable automatically; FUNNYFACES already listens on it.
+4. Add persistent storage or replace local storage with cloud object storage before real events.
 
-form?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!input.files.length) {
-    setStatus("Choose at least one file first.");
-    return;
-  }
+## Important
 
-  const data = new FormData();
-  for (const file of input.files) {
-    data.append("photos", file);
-  }
-
-  const button = form.querySelector("button");
-  button.disabled = true;
-  setStatus("Uploading...");
-
-  try {
-    const response = await fetch(`/api/events/${encodeURIComponent(window.EVENT_SLUG)}/photos`, {
-      method: "POST",
-      body: data,
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || "Upload failed");
-    }
-    input.value = "";
-    setStatus(`Uploaded ${result.saved.length} file${result.saved.length === 1 ? "" : "s"}. Thank you!`);
-    renderPhotos(result.photos || []);
-  } catch (error) {
-    setStatus(error.message);
-  } finally {
-    button.disabled = false;
-  }
-});
+Local filesystem uploads can disappear on many free or ephemeral hosts after redeploys. For real events, use a provider with persistent disks or switch uploads to S3-compatible storage.

@@ -449,7 +449,7 @@ class EventHandler(BaseHTTPRequestHandler):
   <section class="upload-panel">
     <p class="eyebrow">{html.escape(event.get("date") or "Event photos")}</p>
     <h1>{html.escape(event["name"])}</h1>
-    <form id="uploadForm" class="drop-zone">
+    <form id="uploadForm" class="drop-zone" method="post" action="/api/events/{quote(slug)}/photos" enctype="multipart/form-data">
       <input id="photos" name="photos" type="file" accept="image/*,video/mp4,video/quicktime" multiple required>
       <label for="photos">
         <span class="upload-icon">+</span>
@@ -501,10 +501,17 @@ class EventHandler(BaseHTTPRequestHandler):
             with path.open("wb") as output:
                 output.write(item.file.read())
             saved.append(filename)
+        wants_json = self.headers.get("X-Requested-With") == "fetch"
         if not saved:
-            self.error_json(HTTPStatus.BAD_REQUEST, "No valid photo or video files were uploaded")
+            if wants_json:
+                self.error_json(HTTPStatus.BAD_REQUEST, "No valid photo or video files were uploaded")
+            else:
+                self.redirect(f"/e/{quote(slug)}")
             return
-        self.respond_json({"ok": True, "saved": saved, "photos": photo_records(slug)[:8]})
+        if wants_json:
+            self.respond_json({"ok": True, "saved": saved, "photos": photo_records(slug)[:8]})
+        else:
+            self.redirect(f"/e/{quote(slug)}")
 
     def list_photos(self, slug: str) -> None:
         if not event_by_slug(slug):
