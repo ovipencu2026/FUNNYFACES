@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import cgi
+import hashlib
+import hmac
 import html
 import json
 import os
@@ -29,6 +31,9 @@ STORAGE_ROOT = Path(os.environ.get("STORAGE_DIR", ROOT)).resolve()
 DATA_DIR = STORAGE_ROOT / "data"
 UPLOAD_DIR = STORAGE_ROOT / "uploads"
 EVENTS_FILE = DATA_DIR / "events.json"
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+SESSION_SECRET = os.environ.get("SESSION_SECRET", ADMIN_PASSWORD or "funnyfaces-local-secret")
+SESSION_COOKIE = "funnyfaces_admin"
 MAX_UPLOAD_BYTES = 80 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif", ".mov", ".mp4"}
 
@@ -138,6 +143,15 @@ def render_page(title: str, body: str, extra_head: str = "") -> bytes:
 {body}
 </body>
 </html>""".encode("utf-8")
+
+
+def admin_token() -> str:
+    return hmac.new(SESSION_SECRET.encode("utf-8"), ADMIN_PASSWORD.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def is_local_host(host: str) -> bool:
+    hostname = host.split(":", 1)[0].lower()
+    return hostname in {"localhost", "127.0.0.1", "::1"}
 
 
 class QRCodeV5L:
@@ -355,12 +369,22 @@ class EventHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/":
+            if not self.require_admin():
+                return
             self.show_home()
+        elif path == "/login":
+            self.show_login()
+        elif path == "/logout":
+            self.logout()
         elif path.startswith("/e/"):
             self.show_upload(unquote(path.removeprefix("/e/")))
         elif path.startswith("/gallery/"):
+            if not self.require_admin():
+                return
             self.show_gallery(unquote(path.removeprefix("/gallery/")))
         elif path.startswith("/download/"):
+            if not self.require_admin():
+                return
             self.download_album(unquote(path.removeprefix("/download/")))
         elif path.startswith("/qr/") and path.endswith(".png"):
             self.show_qr(unquote(path.removeprefix("/qr/").removesuffix(".png")))
@@ -376,13 +400,87 @@ class EventHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
-        if path == "/events":
+        if path == "/login":
+            self.login()
+        elif path == "/events":
+            if not self.require_admin():
+                return
             self.create_event()
         elif path.startswith("/api/events/") and path.endswith("/photos"):
             slug = unquote(path.removeprefix("/api/events/").removesuffix("/photos"))
             self.upload_photos(slug)
         else:
             self.error_page(HTTPStatus.NOT_FOUND, "Endpoint not found")
+
+    def is_admin(self) -> bool:
+        if not ADMIN_PASSWORD:
+            return is_local_host(self.headers.get("Host", ""))
+        cookie = self.headers.get("Cookie", "")
+        cookies = {}
+        for part in cookie.split(";"):
+            if "=" in part:
+                key, value = part.strip().split("=", 1)
+                cookies[key] = value
+        return hmac.compare_digest(cookies.get(SESSION_COOKIE, ""), admin_token())
+
+    def require_admin(self) -> bool:
+        if self.is_admin():
+            return True
+        if not ADMIN_PASSWORD:
+            self.show_admin_setup_required()
+            return False
+        self.redirect("/login")
+        return False
+
+    def show_admin_setup_required(self) -> None:
+        body = """
+<main class="upload-screen login-screen">
+  <section class="upload-panel login-panel">
+    <p class="eyebrow">Setup required</p>
+    <h1>FUNNYFACES</h1>
+    <p class="lead">Admin access is locked until ADMIN_PASSWORD is configured in Render.</p>
+  </section>
+</main>"""
+        self.respond(render_page("FUNNYFACES Setup Required", body), "text/html; charset=utf-8")
+
+    def show_login(self, error: str = "") -> None:
+        if self.is_admin():
+            self.redirect("/")
+            return
+        message = f'<p class="login-error">{html.escape(error)}</p>' if error else ""
+        body = f"""
+<main class="upload-screen login-screen">
+  <section class="upload-panel login-panel">
+    <p class="eyebrow">Organizer access</p>
+    <h1>FUNNYFACES</h1>
+    <form class="create-form" method="post" action="/login">
+      <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Log in</button>
+    </form>
+    {message}
+  </section>
+</main>"""
+        self.respond(render_page("FUNNYFACES Login", body), "text/html; charset=utf-8")
+
+    def login(self) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        values = parse_qs(self.rfile.read(length).decode("utf-8"))
+        password = values.get("password", [""])[0]
+        if ADMIN_PASSWORD and hmac.compare_digest(password, ADMIN_PASSWORD):
+            secure = "; Secure" if not is_local_host(self.headers.get("Host", "")) else ""
+            self.send_response(HTTPStatus.SEE_OTHER)
+            self.send_header("Location", "/")
+            self.send_header("Set-Cookie", f"{SESSION_COOKIE}={admin_token()}; Path=/; HttpOnly; SameSite=Lax{secure}")
+            self.end_headers()
+            return
+        self.show_login("Wrong password. Try again.")
+
+    def logout(self) -> None:
+        self.send_response(HTTPStatus.SEE_OTHER)
+        self.send_header("Location", "/login")
+        secure = "; Secure" if not is_local_host(self.headers.get("Host", "")) else ""
+        self.send_header("Set-Cookie", f"{SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax{secure}")
+        self.end_headers()
 
     def show_home(self) -> None:
         events = load_events()
@@ -409,6 +507,7 @@ class EventHandler(BaseHTTPRequestHandler):
             cards.append('<p class="empty">Create your first event to get a scannable QR code.</p>')
         body = f"""
 <main class="shell">
+  <nav class="topbar"><span>Organizer dashboard</span><a href="/logout">Log out</a></nav>
   <section class="hero">
     <div>
       <p class="eyebrow">Wedding and event photo sharing</p>
@@ -463,7 +562,7 @@ class EventHandler(BaseHTTPRequestHandler):
       <button type="submit">Upload selected files</button>
     </form>
     <div id="status" class="status" role="status"></div>
-    <a class="gallery-link" href="/gallery/{quote(slug)}">View full gallery</a>
+    <a class="gallery-link" href="/gallery/{quote(slug)}">Organizer gallery</a>
   </section>
   <section class="recent-panel">
     <h2>Recent uploads</h2>
