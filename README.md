@@ -47,6 +47,15 @@ For production, configure persistent storage so event data and uploaded files su
 STORAGE_DIR=/path/to/persistent/storage
 ```
 
+Protect the organizer dashboard with a password:
+
+```text
+ADMIN_PASSWORD=choose-a-strong-password
+SESSION_SECRET=choose-another-long-random-value
+```
+
+Guest QR upload pages stay public. The dashboard, event creation, galleries, and album downloads require the admin password.
+
 ## Production Notes
 
-This is still a lightweight MVP. Before using FUNNYFACES for paid events, add organizer login, cloud backups, stronger media validation, and a privacy policy.
+This is still a lightweight MVP. Before using FUNNYFACES for paid events, add cloud backups, stronger media validation, and a privacy policy.
