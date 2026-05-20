@@ -144,6 +144,15 @@ button:hover,
   background: #edf3ef;
 }
 
+.danger-button {
+  width: 100%;
+  background: #b91c1c;
+}
+
+.danger-button:hover {
+  background: #7f1d1d;
+}
+
 .events-grid,
 .photo-grid {
   display: grid;
@@ -180,6 +189,25 @@ button:hover,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.delete-form {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.delete-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+}
+
+.delete-form input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
 }
 
 .topbar {
