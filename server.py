@@ -7,6 +7,7 @@ import html
 import json
 import os
 import re
+import shutil
 import socket
 import sys
 import time
@@ -406,6 +407,11 @@ class EventHandler(BaseHTTPRequestHandler):
             if not self.require_admin():
                 return
             self.create_event()
+        elif path.startswith("/events/") and path.endswith("/delete"):
+            if not self.require_admin():
+                return
+            slug = unquote(path.removeprefix("/events/").removesuffix("/delete"))
+            self.delete_event(slug)
         elif path.startswith("/api/events/") and path.endswith("/photos"):
             slug = unquote(path.removeprefix("/api/events/").removesuffix("/photos"))
             self.upload_photos(slug)
@@ -501,6 +507,10 @@ class EventHandler(BaseHTTPRequestHandler):
             <a class="button secondary" href="/gallery/{quote(event['slug'])}">Gallery</a>
           </div>
           <input readonly value="{html.escape(link)}" onclick="this.select()">
+          <form class="delete-form" method="post" action="/events/{quote(event['slug'])}/delete">
+            <label><input type="checkbox" name="confirm" value="yes" required> Confirm delete</label>
+            <button class="danger-button" type="submit">Delete album</button>
+          </form>
         </article>"""
             )
         if not cards:
@@ -540,6 +550,23 @@ class EventHandler(BaseHTTPRequestHandler):
         save_events(events)
         (UPLOAD_DIR / slug).mkdir(parents=True, exist_ok=True)
         self.redirect(f"/gallery/{quote(slug)}")
+
+    def delete_event(self, slug: str) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        values = parse_qs(self.rfile.read(length).decode("utf-8"))
+        if values.get("confirm", [""])[0] != "yes":
+            self.error_page(HTTPStatus.BAD_REQUEST, "Confirm delete before removing an album")
+            return
+        events = load_events()
+        remaining = [event for event in events if event["slug"] != slug]
+        if len(remaining) == len(events):
+            self.error_page(HTTPStatus.NOT_FOUND, "Album not found")
+            return
+        save_events(remaining)
+        upload_path = (UPLOAD_DIR / slug).resolve()
+        if str(upload_path).startswith(str(UPLOAD_DIR.resolve())) and upload_path.exists():
+            shutil.rmtree(upload_path)
+        self.redirect("/")
 
     def show_upload(self, slug: str) -> None:
         event = event_by_slug(slug)
