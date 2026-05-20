@@ -531,7 +531,7 @@ class EventHandler(BaseHTTPRequestHandler):
         photos = photo_records(slug)
         link = event_link(self, event)
         body = f"""
-<main class="shell">
+<main class="shell album-page">
   <nav class="topbar">
     <a href="/">All events</a>
     <a href="/e/{quote(slug)}">Guest upload page</a>
