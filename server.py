@@ -9,8 +9,10 @@ import socket
 import sys
 import time
 import uuid
+import zipfile
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from io import BytesIO
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
@@ -358,6 +360,8 @@ class EventHandler(BaseHTTPRequestHandler):
             self.show_upload(unquote(path.removeprefix("/e/")))
         elif path.startswith("/gallery/"):
             self.show_gallery(unquote(path.removeprefix("/gallery/")))
+        elif path.startswith("/download/"):
+            self.download_album(unquote(path.removeprefix("/download/")))
         elif path.startswith("/qr/") and path.endswith(".png"):
             self.show_qr(unquote(path.removeprefix("/qr/").removesuffix(".png")))
         elif path.startswith("/api/events/") and path.endswith("/photos"):
@@ -528,7 +532,11 @@ class EventHandler(BaseHTTPRequestHandler):
         link = event_link(self, event)
         body = f"""
 <main class="shell">
-  <nav class="topbar"><a href="/">All events</a><a href="/e/{quote(slug)}">Guest upload page</a></nav>
+  <nav class="topbar">
+    <a href="/">All events</a>
+    <a href="/e/{quote(slug)}">Guest upload page</a>
+    <a class="download-link" href="/download/{quote(slug)}">Download album</a>
+  </nav>
   <section class="gallery-head">
     <div>
       <p class="eyebrow">{html.escape(event.get("date") or "Gallery")}</p>
@@ -544,14 +552,29 @@ class EventHandler(BaseHTTPRequestHandler):
 </main>"""
         self.respond(render_page(f"{event['name']} Gallery", body), "text/html; charset=utf-8")
 
+    def download_album(self, slug: str) -> None:
+        event = event_by_slug(slug)
+        if not event:
+            self.error_page(HTTPStatus.NOT_FOUND, "Event not found")
+            return
+        directory = UPLOAD_DIR / slug
+        buffer = BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            if directory.exists():
+                for path in sorted(directory.iterdir(), key=lambda item: item.stat().st_mtime):
+                    if path.is_file() and not path.name.startswith("."):
+                        archive.write(path, arcname=path.name)
+            if not archive.namelist():
+                archive.writestr("README.txt", "No photos or videos have been uploaded yet.")
+        filename = f"{slug}-funnyfaces-album.zip"
+        self.respond_download(buffer.getvalue(), filename)
+
     def show_qr(self, slug: str) -> None:
         event = event_by_slug(slug)
         if not event:
             self.error_page(HTTPStatus.NOT_FOUND, "Event not found")
             return
         if qrcode:
-            from io import BytesIO
-
             image = qrcode.make(event_link(self, event))
             buffer = BytesIO()
             image.save(buffer, format="PNG")
@@ -604,6 +627,14 @@ class EventHandler(BaseHTTPRequestHandler):
     def respond(self, body: bytes, content_type: str) -> None:
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def respond_download(self, body: bytes, filename: str) -> None:
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
