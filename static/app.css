@@ -170,11 +170,21 @@ button:hover,
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   justify-content: flex-end;
+  align-items: center;
   padding: 8px 0 18px;
   color: var(--brand-dark);
   font-weight: 800;
+}
+
+.download-link {
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: #fff;
+  background: var(--accent);
+  text-decoration: none;
 }
 
 .qr-card {
