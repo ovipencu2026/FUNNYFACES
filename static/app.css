@@ -336,6 +336,24 @@ button:hover,
   font-weight: 800;
 }
 
+.login-screen {
+  grid-template-columns: minmax(280px, 520px);
+}
+
+.login-panel .create-form {
+  margin-top: 24px;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
+}
+
+.login-error {
+  margin: 14px 0 0;
+  color: #b91c1c;
+  font-weight: 800;
+}
+
 .photo-grid.compact {
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 }
