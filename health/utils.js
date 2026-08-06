@@ -29,6 +29,34 @@ export function shortDayLabel(key) {
   return zile[new Date(y, m - 1, d).getDay()];
 }
 
+/** Numărul zilei din lună (pentru grafic lunar). */
+export function dayOfMonthLabel(key) {
+  return String(Number(key.split('-')[2]));
+}
+
+/** Media unui șir de numere (0 dacă e gol). */
+export function average(arr) {
+  if (!arr.length) return 0;
+  return arr.reduce((s, x) => s + x, 0) / arr.length;
+}
+
+/**
+ * Serie de zile consecutive (până azi inclusiv) în care valoarea >= obiectiv.
+ * Ziua de azi se numără doar dacă a atins deja obiectivul; altfel seria e cea
+ * de până ieri (ca să nu „rupem” seria doar pentru că ziua nu s-a terminat).
+ */
+export function computeStreak(valuesOldToNew, goal) {
+  const v = valuesOldToNew.slice();
+  const today = v.pop() ?? 0;
+  let streak = 0;
+  for (let i = v.length - 1; i >= 0; i--) {
+    if (v[i] >= goal) streak++;
+    else break;
+  }
+  if (today >= goal) streak++; // azi atins → intră în serie
+  return streak;
+}
+
 /** Distanță Haversine în metri între două coordonate. */
 export function haversine(a, b) {
   const toRad = (x) => (x * Math.PI) / 180;

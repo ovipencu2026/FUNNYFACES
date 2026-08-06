@@ -98,6 +98,65 @@ body {
 .hero-label { color: var(--muted); font-size: 15px; }
 .hero-goal { color: var(--accent-2); font-size: 13px; margin-top: 4px; }
 
+/* Streak strip */
+.streak-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.streak-flame { font-size: 20px; }
+.streak-text { font-weight: 600; font-size: 15px; }
+.streak-text b { color: var(--warn); }
+.bedtime-chip {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--sleep);
+  background: rgba(139,108,255,.14);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Weekly averages */
+.avg-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.avg-card {
+  background: var(--card-2);
+  border-radius: 14px;
+  padding: 14px 10px;
+  text-align: center;
+}
+.avg-value { display: block; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.avg-label { color: var(--muted); font-size: 12px; }
+
+/* Manual step editing */
+.manual-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.manual-steps-label { color: var(--muted); font-size: 12px; text-align: center; }
+.stepper { display: flex; gap: 8px; }
+.step-btn {
+  flex: 1;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.step-btn:active { transform: scale(.96); }
+
 /* Stat grid */
 .stat-grid {
   display: grid;

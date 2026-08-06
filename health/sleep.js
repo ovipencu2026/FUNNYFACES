@@ -19,16 +19,28 @@ export class SleepTracker {
 
   start() {
     if (this.active) return;
-    this.active = true;
     this.startAt = Date.now();
     this.moveEvents = 0;
+    this._begin();
+  }
+
+  /** Reia o sesiune întreruptă (ex. după repornirea aplicației noaptea). */
+  resume(startAt, moveEvents = 0) {
+    if (this.active) return;
+    this.startAt = startAt;
+    this.moveEvents = moveEvents;
+    this._begin();
+  }
+
+  _begin() {
+    this.active = true;
     this._baseline = null;
     this._lastMove = 0;
     if (typeof DeviceMotionEvent !== 'undefined') {
       window.addEventListener('devicemotion', this._motionHandler, { passive: true });
     }
     this._interval = setInterval(() => this.onTick(this.elapsed()), 1000);
-    this.onTick(0);
+    this.onTick(this.elapsed());
   }
 
   /** Oprește sesiunea și întoarce înregistrarea (sau null dacă prea scurtă). */

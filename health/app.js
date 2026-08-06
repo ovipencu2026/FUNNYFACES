@@ -2,8 +2,9 @@
 // modulelor de pași, somn și sport la interfață.
 import { Store } from './storage.js';
 import {
-  dayKey, lastDays, shortDayLabel, fmtNum, fmtDuration, fmtHm,
-  strideLength, stepCalories, paceMinKm, speedKmh, SPORT_META,
+  dayKey, lastDays, shortDayLabel, dayOfMonthLabel, average, computeStreak,
+  fmtNum, fmtDuration, fmtHm, strideLength, stepCalories, paceMinKm,
+  speedKmh, SPORT_META,
 } from './utils.js';
 import { StepCounter } from './steps.js';
 import { SleepTracker, qualityLabel } from './sleep.js';
@@ -91,14 +92,68 @@ function renderDashboard() {
   // grafice
   const keys = lastDays(7);
   const labels = keys.map(shortDayLabel);
-  barChart($('#chart-steps'), Store.stepsSeries(keys), labels, {
+  const weekSteps = Store.stepsSeries(keys);
+  barChart($('#chart-steps'), weekSteps, labels, {
     color: '#5b8cff', goal, format: (v) => fmtNum(v),
   });
-  barChart($('#chart-sleep'), Store.sleepSeries(keys).map((s) => s / 3600), labels, {
+  const weekSleep = Store.sleepSeries(keys).map((s) => s / 3600);
+  barChart($('#chart-sleep'), weekSleep, labels, {
     color: '#8b6cff', format: (v) => `${v.toFixed(1)}h`,
   });
 
+  // Grafic lunar (30 de zile) — etichete rărite
+  const mKeys = lastDays(30);
+  barChart($('#chart-month'), Store.stepsSeries(mKeys), mKeys.map(dayOfMonthLabel), {
+    color: '#5b8cff', goal, format: (v) => fmtNum(v), labelEvery: 5,
+  });
+
+  // Medii săptămânale
+  const avgSteps = average(weekSteps);
+  $('#avg-steps').textContent = fmtNum(Math.round(avgSteps));
+  $('#avg-distance').textContent = `${fmtNum((avgSteps * strideLength(p)) / 1000, 1)} km`;
+  const sleptNights = weekSleep.filter((h) => h > 0);
+  $('#avg-sleep').textContent = sleptNights.length
+    ? fmtHm(average(sleptNights) * 3600)
+    : '—';
+
+  // Serie (streak) de zile cu obiectivul atins
+  renderStreak(weekSteps.length ? Store.stepsSeries(lastDays(60)) : [], goal);
+
+  // Memento culcare
+  renderBedtime(p.bedtime);
+
   renderRecent();
+}
+
+function renderStreak(series60, goal) {
+  const streak = computeStreak(series60, goal);
+  const el = $('#streak-text');
+  if (streak <= 0) {
+    el.innerHTML = 'Atinge obiectivul azi ca să pornești o serie 🔥';
+  } else if (streak === 1) {
+    el.innerHTML = 'Serie: <b>1 zi</b> cu obiectivul atins. Continuă!';
+  } else {
+    el.innerHTML = `Serie: <b>${streak} zile</b> la rând cu obiectivul atins!`;
+  }
+}
+
+function renderBedtime(bedtime) {
+  const chip = $('#bedtime-chip');
+  if (!bedtime) { chip.hidden = true; return; }
+  const [h, m] = bedtime.split(':').map(Number);
+  const now = new Date();
+  const bt = new Date(now);
+  bt.setHours(h, m, 0, 0);
+  let diffMin = Math.round((bt - now) / 60000);
+  if (diffMin < -60) diffMin += 24 * 60; // trecut de mult → mâine
+  chip.hidden = false;
+  if (diffMin >= 0 && diffMin <= 60) {
+    chip.textContent = `😴 Culcare în ${diffMin} min`;
+  } else if (diffMin < 0) {
+    chip.textContent = `😴 Ora de culcare a trecut`;
+  } else {
+    chip.textContent = `😴 Culcare: ${bedtime}`;
+  }
 }
 
 function greet(name) {
@@ -199,6 +254,16 @@ async function toggleSteps() {
 }
 $('#steps-toggle').addEventListener('click', toggleSteps);
 
+function adjustSteps(delta) {
+  const current = Store.getSteps();
+  Store.setSteps(Math.max(0, current + delta));
+  renderStepsView();
+}
+$('#steps-plus').addEventListener('click', () => adjustSteps(100));
+$('#steps-plus10').addEventListener('click', () => adjustSteps(10));
+$('#steps-minus10').addEventListener('click', () => adjustSteps(-10));
+$('#steps-minus').addEventListener('click', () => adjustSteps(-100));
+
 // =====================================================
 //  SOMN
 // =====================================================
@@ -244,28 +309,62 @@ function sleepRow(s) {
   </li>`;
 }
 
+let sleepPersistCounter = 0;
+
+function makeSleepTracker() {
+  return new SleepTracker({
+    onTick: (sec) => {
+      $('#sleep-timer').textContent = fmtDuration(sec, true);
+      // salvăm periodic progresul, ca sesiunea să reziste la repornire
+      if (sleepUI.active && ++sleepPersistCounter % 20 === 0) {
+        Store.setActiveSleep({
+          start: sleepUI.tracker.startAt,
+          moveEvents: sleepUI.tracker.moveEvents,
+        });
+      }
+    },
+  });
+}
+
+function enterSleepActiveUI() {
+  sleepUI.active = true;
+  requestWakeLock();
+  $('#sleep-toggle').textContent = '☀️ M-am trezit';
+  $('#sleep-state').textContent = 'Dormi liniștit… apasă dimineața „M-am trezit”';
+  $('.sleep-hero').classList.add('active');
+}
+
+function exitSleepActiveUI() {
+  sleepUI.active = false;
+  releaseWakeLock();
+  $('#sleep-toggle').textContent = '🌙 Adorm';
+  $('#sleep-timer').textContent = '00:00:00';
+  $('#sleep-state').textContent = 'Apasă „Adorm” când te culci';
+  $('.sleep-hero').classList.remove('active');
+}
+
+/** Reia o sesiune de somn salvată (după reîncărcarea aplicației). */
+function restoreSleepIfAny() {
+  const saved = Store.getActiveSleep();
+  if (!saved || !saved.start) return;
+  sleepUI.tracker = makeSleepTracker();
+  sleepUI.tracker.resume(saved.start, saved.moveEvents || 0);
+  enterSleepActiveUI();
+}
+
 function toggleSleep() {
-  if (!sleepUI.tracker) {
-    sleepUI.tracker = new SleepTracker({
-      onTick: (sec) => { $('#sleep-timer').textContent = fmtDuration(sec, true); },
-    });
-  }
+  if (!sleepUI.tracker) sleepUI.tracker = makeSleepTracker();
+
   if (!sleepUI.active) {
     sleepUI.tracker.start();
-    sleepUI.active = true;
-    requestWakeLock();
-    $('#sleep-toggle').textContent = '☀️ M-am trezit';
-    $('#sleep-state').textContent = 'Dormi liniștit… monitorizez mișcarea';
-    $('.sleep-hero').classList.add('active');
+    enterSleepActiveUI();
+    Store.setActiveSleep({ start: sleepUI.tracker.startAt, moveEvents: 0 });
     toast('Somn plăcut! 😴');
   } else {
     const rec = sleepUI.tracker.stop();
-    sleepUI.active = false;
-    releaseWakeLock();
-    $('#sleep-toggle').textContent = '🌙 Adorm';
-    $('#sleep-timer').textContent = '00:00:00';
-    $('#sleep-state').textContent = 'Apasă „Adorm” când te culci';
-    $('.sleep-hero').classList.remove('active');
+    exitSleepActiveUI();
+    Store.clearActiveSleep();
+    sleepUI.tracker = null;
     if (rec) {
       Store.addSleep(rec);
       const q = qualityLabel(rec.quality);
@@ -427,6 +526,7 @@ function fillProfileForm() {
   $('#p-height').value = p.height ?? '';
   $('#p-weight').value = p.weight ?? '';
   $('#p-goal').value = p.goal ?? 8000;
+  $('#p-bedtime').value = p.bedtime || '';
   $('#p-keepawake').checked = !!p.keepAwake;
 }
 
@@ -439,6 +539,7 @@ $('#profile-form').addEventListener('submit', (e) => {
     height: numOrNull($('#p-height').value),
     weight: numOrNull($('#p-weight').value),
     goal: Number($('#p-goal').value) || 8000,
+    bedtime: $('#p-bedtime').value || '',
     keepAwake: $('#p-keepawake').checked,
   });
   const note = $('#profile-saved');
@@ -490,4 +591,5 @@ if ('serviceWorker' in navigator) {
 }
 
 updateSportLabels();
+restoreSleepIfAny();
 goto('dashboard');

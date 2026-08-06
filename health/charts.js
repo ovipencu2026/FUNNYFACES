@@ -43,6 +43,9 @@ export function barChart(canvas, values, labels, opts = {}) {
     ctx.setLineDash([]);
   }
 
+  // când sunt multe bare, arătăm eticheta doar din X în X
+  const labelEvery = opts.labelEvery || 1;
+
   values.forEach((v, i) => {
     const x = i * (bw + gap);
     const bh = Math.max(2, (v / max) * chartH);
@@ -53,7 +56,7 @@ export function barChart(canvas, values, labels, opts = {}) {
     grad.addColorStop(0, color);
     grad.addColorStop(1, isLast ? color : color + '99');
     ctx.fillStyle = v === 0 ? 'rgba(255,255,255,.08)' : grad;
-    roundRect(ctx, x, y, bw, bh, Math.min(6, bw / 2));
+    roundRect(ctx, x, y, bw, Math.max(2, bh), Math.min(6, bw / 2));
     ctx.fill();
 
     // valoare deasupra barei celei mai recente
@@ -64,11 +67,14 @@ export function barChart(canvas, values, labels, opts = {}) {
       ctx.fillText(fmt(v), x + bw / 2, y - 5);
     }
 
-    // etichetă
-    ctx.fillStyle = isLast ? '#eef1ff' : '#9aa6d4';
-    ctx.font = '11px -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(labels[i] || '', x + bw / 2, h - 6);
+    // etichetă (rărită la grafice dese)
+    const showLabel = isLast || i % labelEvery === 0;
+    if (showLabel && labels[i] != null) {
+      ctx.fillStyle = isLast ? '#eef1ff' : '#9aa6d4';
+      ctx.font = '11px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(labels[i], x + bw / 2, h - 6);
+    }
   });
 }
 

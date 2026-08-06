@@ -12,6 +12,7 @@ const DEFAULTS = {
     weight: null,
     goal: 8000,
     keepAwake: true,
+    bedtime: '', // ex. "23:00" pentru memento culcare
   },
   // steps: { 'YYYY-MM-DD': numărPași }
   steps: {},
@@ -19,6 +20,8 @@ const DEFAULTS = {
   sleep: [],
   // activities: [ { id, sport, start, durationSec, distanceM, calories, path:[[lat,lon]] } ]
   activities: [],
+  // sesiune de somn în curs, ca să reziste dacă aplicația se reîncarcă noaptea
+  activeSleep: null, // { start, moveEvents }
 };
 
 let state = load();
@@ -33,6 +36,7 @@ function load() {
       steps: parsed.steps || {},
       sleep: parsed.sleep || [],
       activities: parsed.activities || [],
+      activeSleep: parsed.activeSleep || null,
     };
   } catch (e) {
     console.warn('Storage corupt, resetez.', e);
@@ -93,6 +97,18 @@ export const Store = {
   },
   deleteSleep(id) {
     state.sleep = state.sleep.filter((s) => s.id !== id);
+    persist();
+  },
+  // --- Sesiune de somn în curs (supraviețuiește repornirii aplicației) ---
+  setActiveSleep(session) {
+    state.activeSleep = session;
+    persist();
+  },
+  getActiveSleep() {
+    return state.activeSleep;
+  },
+  clearActiveSleep() {
+    state.activeSleep = null;
     persist();
   },
   // durata somnului care se termină într-o anumită zi (pentru grafic)

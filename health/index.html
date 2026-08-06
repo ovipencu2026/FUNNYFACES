@@ -38,6 +38,12 @@
         </div>
       </div>
 
+      <div class="streak-strip" id="streak-strip">
+        <span class="streak-flame">🔥</span>
+        <span class="streak-text" id="streak-text">Începe o serie azi</span>
+        <span class="bedtime-chip" id="bedtime-chip" hidden></span>
+      </div>
+
       <div class="stat-grid">
         <div class="stat-card">
           <span class="stat-icon">📏</span>
@@ -73,6 +79,31 @@
           <h2>Somn — ultimele 7 nopți</h2>
         </div>
         <canvas id="chart-sleep" class="chart" height="160"></canvas>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Pași — ultimele 30 de zile</h2>
+        </div>
+        <canvas id="chart-month" class="chart" height="150"></canvas>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Medii săptămânale</h2></div>
+        <div class="avg-grid">
+          <div class="avg-card">
+            <span class="avg-value" id="avg-steps">0</span>
+            <span class="avg-label">pași / zi</span>
+          </div>
+          <div class="avg-card">
+            <span class="avg-value" id="avg-distance">0,0 km</span>
+            <span class="avg-label">distanță / zi</span>
+          </div>
+          <div class="avg-card">
+            <span class="avg-value" id="avg-sleep">—</span>
+            <span class="avg-label">somn / noapte</span>
+          </div>
+        </div>
       </div>
 
       <div class="panel" id="recent-panel">
@@ -121,6 +152,17 @@
       </div>
 
       <button class="btn btn-primary btn-big" id="steps-toggle">▶ Pornește contorul</button>
+
+      <div class="manual-steps">
+        <span class="manual-steps-label">Ajustează manual</span>
+        <div class="stepper">
+          <button class="step-btn" id="steps-minus" aria-label="Scade 100 pași">−100</button>
+          <button class="step-btn" id="steps-minus10" aria-label="Scade 10 pași">−10</button>
+          <button class="step-btn" id="steps-plus10" aria-label="Adaugă 10 pași">+10</button>
+          <button class="step-btn" id="steps-plus" aria-label="Adaugă 100 pași">+100</button>
+        </div>
+      </div>
+
       <p class="hint" id="steps-hint">
         Ține telefonul în mână sau în buzunar și pornește contorul. Numărarea are loc
         cât timp aplicația e deschisă pe ecran. Prima dată telefonul îți poate cere
@@ -261,6 +303,9 @@
         </div>
         <label>Obiectiv pași / zi
           <input type="number" id="p-goal" min="1000" max="50000" step="500" placeholder="8000" />
+        </label>
+        <label>Memento culcare (opțional)
+          <input type="time" id="p-bedtime" />
         </label>
         <label class="check-row">
           <input type="checkbox" id="p-keepawake" />
