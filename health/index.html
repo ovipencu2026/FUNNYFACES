@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PulsFit" />
+  <title>PulsFit — Monitorizare sănătate</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- DASHBOARD -->
+    <section class="view" id="view-dashboard" data-view="dashboard">
+      <header class="app-header">
+        <div>
+          <p class="greeting" id="greeting">Bună!</p>
+          <h1 class="brand">PulsFit</h1>
+        </div>
+        <button class="icon-btn" id="header-settings" aria-label="Setări">⚙️</button>
+      </header>
+
+      <div class="hero-ring">
+        <svg viewBox="0 0 220 220" class="ring" aria-hidden="true">
+          <circle class="ring-bg" cx="110" cy="110" r="96" />
+          <circle class="ring-fg" id="dash-ring" cx="110" cy="110" r="96" />
+        </svg>
+        <div class="hero-ring-center">
+          <span class="hero-steps" id="dash-steps">0</span>
+          <span class="hero-label">pași azi</span>
+          <span class="hero-goal" id="dash-goal">obiectiv 8.000</span>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="stat-icon">📏</span>
+          <span class="stat-value" id="dash-distance">0,00 km</span>
+          <span class="stat-label">Distanță azi</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">🔥</span>
+          <span class="stat-value" id="dash-calories">0 kcal</span>
+          <span class="stat-label">Calorii active</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">😴</span>
+          <span class="stat-value" id="dash-sleep">—</span>
+          <span class="stat-label">Somn (azi-noapte)</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">🏃</span>
+          <span class="stat-value" id="dash-activities">0</span>
+          <span class="stat-label">Antrenamente azi</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Pași — ultimele 7 zile</h2>
+        </div>
+        <canvas id="chart-steps" class="chart" height="160"></canvas>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Somn — ultimele 7 nopți</h2>
+        </div>
+        <canvas id="chart-sleep" class="chart" height="160"></canvas>
+      </div>
+
+      <div class="panel" id="recent-panel">
+        <div class="panel-head">
+          <h2>Activități recente</h2>
+        </div>
+        <ul class="recent-list" id="recent-list"></ul>
+      </div>
+    </section>
+
+    <!-- STEPS -->
+    <section class="view" id="view-steps" data-view="steps" hidden>
+      <header class="app-header">
+        <h1 class="brand">Pași</h1>
+      </header>
+
+      <div class="hero-ring">
+        <svg viewBox="0 0 220 220" class="ring" aria-hidden="true">
+          <circle class="ring-bg" cx="110" cy="110" r="96" />
+          <circle class="ring-fg" id="steps-ring" cx="110" cy="110" r="96" />
+        </svg>
+        <div class="hero-ring-center">
+          <span class="hero-steps" id="steps-count">0</span>
+          <span class="hero-label">pași azi</span>
+          <span class="hero-goal" id="steps-goal">obiectiv 8.000</span>
+        </div>
+      </div>
+
+      <div class="stat-grid stat-grid-3">
+        <div class="stat-card">
+          <span class="stat-value" id="steps-distance">0,00</span>
+          <span class="stat-label">km</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="steps-calories">0</span>
+          <span class="stat-label">kcal</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="steps-cadence">0</span>
+          <span class="stat-label">pași/min</span>
+        </div>
+      </div>
+
+      <div class="live-indicator" id="steps-live" hidden>
+        <span class="pulse-dot"></span> Se numără mișcarea…
+      </div>
+
+      <button class="btn btn-primary btn-big" id="steps-toggle">▶ Pornește contorul</button>
+      <p class="hint" id="steps-hint">
+        Ține telefonul în mână sau în buzunar și pornește contorul. Numărarea are loc
+        cât timp aplicația e deschisă pe ecran. Prima dată telefonul îți poate cere
+        permisiune pentru senzorul de mișcare.
+      </p>
+      <p class="hint error" id="steps-error" hidden></p>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Istoric pași</h2></div>
+        <canvas id="chart-steps-full" class="chart" height="180"></canvas>
+      </div>
+    </section>
+
+    <!-- SLEEP -->
+    <section class="view" id="view-sleep" data-view="sleep" hidden>
+      <header class="app-header">
+        <h1 class="brand">Somn</h1>
+      </header>
+
+      <div class="sleep-hero">
+        <div class="sleep-moon" id="sleep-moon">🌙</div>
+        <div class="sleep-timer" id="sleep-timer">00:00:00</div>
+        <div class="sleep-state" id="sleep-state">Apasă „Adorm” când te culci</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary btn-big" id="sleep-toggle">🌙 Adorm</button>
+      </div>
+      <p class="hint" id="sleep-hint">
+        Pune telefonul pe saltea, lângă pernă, cu contorul pornit. Estimăm calitatea
+        somnului din mișcare (actigrafie). Poți adăuga și manual o noapte.
+      </p>
+
+      <button class="btn btn-ghost" id="sleep-manual-btn">＋ Adaugă noapte manual</button>
+
+      <form class="manual-form" id="sleep-manual-form" hidden>
+        <label>Culcare
+          <input type="datetime-local" id="sleep-in" required />
+        </label>
+        <label>Trezire
+          <input type="datetime-local" id="sleep-out" required />
+        </label>
+        <label>Calitate resimțită
+          <select id="sleep-quality">
+            <option value="90">Excelentă</option>
+            <option value="75" selected>Bună</option>
+            <option value="55">Medie</option>
+            <option value="35">Slabă</option>
+          </select>
+        </label>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary">Salvează</button>
+          <button type="button" class="btn btn-ghost" id="sleep-manual-cancel">Anulează</button>
+        </div>
+      </form>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Istoric somn</h2>
+          <span class="panel-sub" id="sleep-average">Medie: —</span>
+        </div>
+        <ul class="sleep-list" id="sleep-list"></ul>
+      </div>
+    </section>
+
+    <!-- SPORT -->
+    <section class="view" id="view-sport" data-view="sport" hidden>
+      <header class="app-header">
+        <h1 class="brand">Sport</h1>
+      </header>
+
+      <div class="sport-picker" id="sport-picker">
+        <button class="sport-chip" data-sport="running">🏃 Alergare</button>
+        <button class="sport-chip" data-sport="cycling">🚴 Ciclism</button>
+        <button class="sport-chip" data-sport="walking">🚶 Mers</button>
+        <button class="sport-chip" data-sport="hiking">🥾 Drumeție</button>
+      </div>
+
+      <canvas id="route-map" class="route-map" height="200"></canvas>
+
+      <div class="sport-stats">
+        <div class="sport-primary">
+          <span class="sport-primary-value" id="sport-distance">0,00</span>
+          <span class="sport-primary-label">km</span>
+        </div>
+        <div class="sport-secondary">
+          <div><span id="sport-duration">00:00</span><small>timp</small></div>
+          <div><span id="sport-pace">—</span><small id="sport-pace-label">ritm</small></div>
+          <div><span id="sport-calories">0</span><small>kcal</small></div>
+        </div>
+      </div>
+
+      <div class="gps-indicator" id="gps-indicator" hidden>
+        <span class="pulse-dot"></span> <span id="gps-status">Se caută semnal GPS…</span>
+      </div>
+
+      <div class="btn-row" id="sport-controls">
+        <button class="btn btn-primary btn-big" id="sport-start">▶ Start</button>
+        <button class="btn btn-warning" id="sport-pause" hidden>⏸ Pauză</button>
+        <button class="btn btn-danger" id="sport-stop" hidden>⏹ Stop</button>
+      </div>
+      <p class="hint error" id="sport-error" hidden></p>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Antrenamente salvate</h2></div>
+        <ul class="recent-list" id="sport-history"></ul>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="view" id="view-profile" data-view="profile" hidden>
+      <header class="app-header">
+        <h1 class="brand">Profil</h1>
+      </header>
+
+      <form class="profile-form" id="profile-form">
+        <label>Nume
+          <input type="text" id="p-name" placeholder="Numele tău" />
+        </label>
+        <div class="form-row">
+          <label>Sex
+            <select id="p-sex">
+              <option value="m">Masculin</option>
+              <option value="f">Feminin</option>
+            </select>
+          </label>
+          <label>Vârstă
+            <input type="number" id="p-age" min="10" max="120" placeholder="30" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Înălțime (cm)
+            <input type="number" id="p-height" min="100" max="230" placeholder="175" />
+          </label>
+          <label>Greutate (kg)
+            <input type="number" id="p-weight" min="30" max="250" placeholder="72" />
+          </label>
+        </div>
+        <label>Obiectiv pași / zi
+          <input type="number" id="p-goal" min="1000" max="50000" step="500" placeholder="8000" />
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="p-keepawake" />
+          Ține ecranul aprins în timpul antrenamentelor și al somnului
+        </label>
+        <button type="submit" class="btn btn-primary btn-big">Salvează profilul</button>
+        <p class="saved-note" id="profile-saved" hidden>✓ Salvat</p>
+      </form>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Date</h2></div>
+        <button class="btn btn-ghost" id="export-data">⬇ Exportă datele (JSON)</button>
+        <button class="btn btn-ghost danger-text" id="reset-data">🗑 Șterge toate datele</button>
+      </div>
+
+      <p class="version">PulsFit · prototip web · datele rămân pe telefonul tău</p>
+    </section>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="tabbar">
+    <button class="tab active" data-goto="dashboard"><span>🏠</span>Acasă</button>
+    <button class="tab" data-goto="steps"><span>👟</span>Pași</button>
+    <button class="tab" data-goto="sport"><span>🏃</span>Sport</button>
+    <button class="tab" data-goto="sleep"><span>😴</span>Somn</button>
+    <button class="tab" data-goto="profile"><span>👤</span>Profil</button>
+  </nav>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
