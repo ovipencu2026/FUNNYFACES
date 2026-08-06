@@ -1,5 +1,5 @@
 // Service worker minimal: cache pentru funcționare offline.
-const CACHE = 'pulsfit-v1';
+const CACHE = 'pulsfit-v2';
 const ASSETS = [
   'index.html',
   'styles.css',
