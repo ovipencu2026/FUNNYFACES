@@ -13,7 +13,8 @@
       "package": "com.ovipencu.pulsfit",
       "versionCode": 1,
       "permissions": [
-        "android.permission.ACTIVITY_RECOGNITION"
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.health.READ_STEPS"
       ]
     },
     "plugins": [
