@@ -5,6 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0b1020",
+      "resizeMode": "contain"
+    },
     "android": {
       "package": "com.ovipencu.pulsfit",
       "versionCode": 1,
@@ -21,13 +25,6 @@
             "compileSdkVersion": 34,
             "targetSdkVersion": 34
           }
-        }
-      ],
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#0b1020",
-          "resizeMode": "contain"
         }
       ],
       [
