@@ -59,3 +59,12 @@ Guest QR upload pages stay public. The dashboard, event creation, galleries, and
 ## Production Notes
 
 This is still a lightweight MVP. Before using FUNNYFACES for paid events, add cloud backups, stronger media validation, and a privacy policy.
+
+---
+
+## PulsFit (aplicație de sănătate)
+
+Acest repository conține și **PulsFit**, o aplicație web (PWA) separată de
+monitorizare a sănătății — numărare pași, somn și sport cu GPS. Este complet
+independentă de FUNNYFACES și trăiește în folderul [`health/`](health/).
+Vezi [`health/README.md`](health/README.md) pentru detalii și mod de rulare.

@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "PulsFit",
+    "slug": "pulsfit",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0b1020",
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "com.ovipencu.pulsfit",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26,
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
+          }
+        }
+      ],
+      [
+        "react-native-health-connect"
+      ],
+      "./plugins/withHealthConnectPermissionDelegate"
+    ]
+  }
+}
