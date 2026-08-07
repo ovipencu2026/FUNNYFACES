@@ -5,13 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0b1020",
     "android": {
       "package": "com.ovipencu.pulsfit",
       "versionCode": 1,
-      "adaptiveIcon": {
-        "backgroundColor": "#0b1020"
-      },
       "permissions": [
         "android.permission.ACTIVITY_RECOGNITION"
       ]
