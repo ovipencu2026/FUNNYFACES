@@ -29,7 +29,8 @@
       ],
       [
         "react-native-health-connect"
-      ]
+      ],
+      "./plugins/withHealthConnectPermissionDelegate"
     ]
   }
 }
